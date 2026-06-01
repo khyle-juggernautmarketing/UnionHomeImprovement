@@ -129,6 +129,7 @@ export async function POST(request: Request) {
 
     const { service, timeline, name, email, phone, address, consent } = validated.data
 
+    // Legacy direct submit — prefer /api/lead/pending then /api/lead/complete with calendar.
     const payload = {
       service,
       timeline,
@@ -140,6 +141,7 @@ export async function POST(request: Request) {
       tcpaConsent: consent,
       source: 'union-home-improvement-landing',
       submittedAt: new Date().toISOString(),
+      submissionType: 'legacy_direct',
     }
 
     let res: Response

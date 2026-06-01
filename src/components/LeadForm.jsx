@@ -2,14 +2,19 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AppointmentCalendar } from '@/components/AppointmentCalendar'
 import { PHONE_PRIMARY, PHONE_PRIMARY_HREF } from '@/lib/constants'
 import { SERVICE_OPTIONS, TIMELINE_OPTIONS } from '@/lib/formOptions'
+
+const PENDING_FLUSH_MS = 10 * 60 * 1000
 
 const STEPS = [
   { id: 1, title: 'What service do you need?' },
   { id: 2, title: 'How soon would you like to schedule production?' },
   { id: 3, title: 'Your contact details' },
+  { id: 4, title: 'Book your in-home assessment' },
 ]
 
 const HTML_TAG = /<[^>]*>/g
@@ -86,31 +91,36 @@ function OptionCard({ label, icon: Icon, selected, onSelect, index }) {
   )
 }
 
-function SuccessMarks() {
-  return (
-    <svg className="h-28 w-28 text-union-gold" viewBox="0 0 64 64" aria-hidden>
-      <circle cx="32" cy="32" r="28" fill="rgba(230,161,30,0.15)" />
-      <path
-        className="animate-check-stroke"
-        stroke="currentColor"
-        strokeWidth="3.5"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M18 34l8 8 20-22"
-      />
-    </svg>
-  )
-}
-
 export function LeadForm() {
+  const router = useRouter()
   const prefersReducedMotion = useReducedMotion()
   const [step, setStep] = useState(1)
   const [data, setData] = useState(initialForm)
   const [status, setStatus] = useState('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [honeypot, setHoneypot] = useState('')
+  const [pendingId, setPendingId] = useState('')
+  const [contactName, setContactName] = useState('')
+  const flushTimerRef = useRef(null)
   const stepAdvanceDelayMs = useStepAdvanceDelay()
+
+  const schedulePendingFlush = useCallback((id) => {
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current)
+    flushTimerRef.current = setTimeout(() => {
+      fetch('/api/lead/pending/flush', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pendingId: id }),
+        credentials: 'same-origin',
+      }).catch(() => {})
+    }, PENDING_FLUSH_MS)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current)
+    }
+  }, [])
 
   const selectService = useCallback(
     (service) => {
@@ -128,6 +138,22 @@ export function LeadForm() {
       setTimeout(() => setStep(3), stepAdvanceDelayMs)
     },
     [stepAdvanceDelayMs],
+  )
+
+  const handleAppointmentBooked = useCallback(
+    (appointment) => {
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current)
+        flushTimerRef.current = null
+      }
+      const params = new URLSearchParams({
+        name: contactName || 'Guest',
+        date: appointment?.dateLabel ?? '',
+        time: appointment?.timeLabel ?? '',
+      })
+      router.push(`/thank-you?${params.toString()}`)
+    },
+    [contactName, router],
   )
 
   const submit = async (e) => {
@@ -193,7 +219,7 @@ export function LeadForm() {
 
     setStatus('loading')
     try {
-      const res = await fetch('/api/lead', {
+      const res = await fetch('/api/lead/pending', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(payload),
@@ -217,9 +243,11 @@ export function LeadForm() {
         return
       }
 
-      setData(initialForm)
-      setStep(1)
-      setStatus('success')
+      setContactName(name)
+      setPendingId(body.pendingId)
+      schedulePendingFlush(body.pendingId)
+      setStep(4)
+      setStatus('idle')
     } catch {
       setStatus('idle')
       setErrorMsg(`Network error. Please try again or call ${PHONE_PRIMARY}.`)
@@ -228,39 +256,13 @@ export function LeadForm() {
 
   const motionDur = prefersReducedMotion ? 0 : 0.35
 
-  if (status === 'success') {
-    return (
-      <div className="rounded-2xl border border-slate-200/60 bg-white/95 p-6 shadow-2xl backdrop-blur-md sm:p-8">
-        <div className="animate-form-success flex min-h-[280px] flex-col items-center justify-center text-center">
-          <SuccessMarks />
-          <h3 className="mt-6 text-xl font-bold text-slate-900">Request Received!</h3>
-          <p className="mt-2 max-w-sm text-slate-600">
-            Our team will reach out shortly. For urgent needs, call{' '}
-            <a
-              href={PHONE_PRIMARY_HREF}
-              className="font-semibold text-union-navy underline decoration-union-gold underline-offset-2"
-            >
-              {PHONE_PRIMARY}
-            </a>
-            .
-          </p>
-          <button
-            type="button"
-            onClick={() => setStatus('idle')}
-            className="mt-8 min-h-12 rounded-xl border-2 border-slate-200 px-6 text-sm font-bold text-slate-900 transition-all duration-300 hover:border-amber-500 hover:bg-amber-50"
-          >
-            Submit another request
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="rounded-2xl border border-slate-200/60 bg-white/95 p-6 shadow-2xl backdrop-blur-md sm:p-8">
       <div className="mb-4 text-center">
         <h3 className="text-lg font-bold text-slate-900 sm:text-xl">Free In-Home Assessment</h3>
-        <p className="mt-1 text-xs text-slate-500 sm:text-sm">Three quick steps — zero obligation.</p>
+        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+          {step < 4 ? 'Quick steps — then pick your appointment time.' : 'Choose a date and time (Eastern).'}
+        </p>
       </div>
 
       <ProgressBar step={step} />
@@ -386,7 +388,7 @@ export function LeadForm() {
                   className="mt-1 h-5 w-5 shrink-0 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
                 />
                 <span className="text-[11px] leading-relaxed text-slate-600 sm:text-xs">
-                  By clicking submit, you authorize Union Home Improvement to text or call regarding
+                  By clicking continue, you authorize Union Home Improvement to text or call regarding
                   this free quote under CCPA &amp; TCPA privacy compliance standards.
                 </span>
               </label>
@@ -403,24 +405,38 @@ export function LeadForm() {
                 {status === 'loading' ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                    Sending...
+                    Saving…
                   </>
                 ) : (
-                  'Submit Free Quote Request'
+                  'Continue to Schedule'
                 )}
               </button>
             </form>
           )}
+
+          {step === 4 && pendingId && (
+            <AppointmentCalendar
+              pendingId={pendingId}
+              onBooked={handleAppointmentBooked}
+              onError={setErrorMsg}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {errorMsg && step !== 3 && (
+      {errorMsg && step === 4 && (
         <p className="mt-3 text-sm text-red-600" role="alert">
           {errorMsg}
         </p>
       )}
 
-      {step > 1 && (
+      {errorMsg && step !== 3 && step !== 4 && (
+        <p className="mt-3 text-sm text-red-600" role="alert">
+          {errorMsg}
+        </p>
+      )}
+
+      {step > 1 && step < 4 && (
         <div className="mt-4 border-t border-slate-200/60 pt-4">
           <button
             type="button"
@@ -432,6 +448,20 @@ export function LeadForm() {
           >
             ← Back
           </button>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="mt-4 border-t border-slate-200/60 pt-4">
+          <p className="text-center text-xs text-slate-500">
+            Need help now? Call{' '}
+            <a
+              href={PHONE_PRIMARY_HREF}
+              className="font-semibold text-union-navy underline decoration-union-gold underline-offset-2"
+            >
+              {PHONE_PRIMARY}
+            </a>
+          </p>
         </div>
       )}
     </div>

@@ -30,6 +30,9 @@ yarn-error.log*
 .env.vercel*
 .vercel/.env*
 
+# local booking store (dev)
+.data/
+
 # large source assets (served from public/)
 Logo.jpg
 

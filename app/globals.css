@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply overflow-x-hidden;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  ::selection {
+    background-color: rgba(230, 161, 30, 0.25);
+    color: #0a1d37;
+  }
+  [id] {
+    scroll-margin-top: 7.5rem;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  @keyframes form-option-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-form-option {
+    opacity: 0;
+    animation: form-option-in 0.28s ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-form-option {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
+  @keyframes form-success-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .animate-form-success {
+    opacity: 0;
+    animation: form-success-pop 0.5s ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-form-success {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
+  @keyframes nav-link-in {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  .nav-mobile-link {
+    opacity: 0;
+    animation: nav-link-in 0.35s ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-mobile-link {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
+  @keyframes check-stroke {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .animate-check-stroke {
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: check-stroke 0.55s ease-out forwards 0.15s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-check-stroke {
+      stroke-dashoffset: 0;
+      animation: none;
+    }
+  }
+
+  @keyframes pulse-ring {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(230, 161, 30, 0.55);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(230, 161, 30, 0);
+    }
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 2s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-pulse-ring {
+      animation: none;
+    }
+  }
+
+  @keyframes orb-drift {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(12px, -18px) scale(1.08);
+    }
+  }
+  .animate-orb-drift {
+    animation: orb-drift 14s ease-in-out infinite;
+  }
+
+  @keyframes orb-drift-reverse {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(-16px, 12px) scale(1.06);
+    }
+  }
+  .animate-orb-drift-reverse {
+    animation: orb-drift-reverse 18s ease-in-out infinite;
+  }
+
+  @keyframes orb-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.75;
+      transform: scale(1.12);
+    }
+  }
+  .animate-orb-pulse {
+    animation: orb-pulse 10s ease-in-out infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+  }
+
+  @keyframes shimmer-line {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  .shimmer-line {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(230, 161, 30, 0.35),
+      transparent
+    );
+    animation: shimmer-line 3s ease-in-out infinite;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #f59e0b 0%, #e6a11e 45%, #d97706 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-orb-drift,
+    .animate-orb-drift-reverse,
+    .animate-orb-pulse,
+    .animate-gradient-shift,
+    .shimmer-line::after {
+      animation: none;
+    }
+  }
+}

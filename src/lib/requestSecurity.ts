@@ -6,7 +6,8 @@ export function isSameOriginRequest(request: Request): boolean {
   if (!host) return false
 
   try {
-    return new URL(origin).host === host
+    const normalize = (h: string) => h.toLowerCase().replace(/^www\./, '')
+    return normalize(new URL(origin).host) === normalize(host)
   } catch {
     return false
   }

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { PHONE_PRIMARY } from '@/lib/constants'
-import { isAllowedWebhookHost, isValidJwtSecret, isValidWebhookUrl, signJwtHS256 } from '@/lib/jwt'
+import { signJwtHS256 } from '@/lib/jwt'
 import { isRateLimited, rateLimitKey, validateLeadBody } from '@/lib/leadSecurity'
 import { isSameOriginRequest } from '@/lib/requestSecurity'
+import { getWebhookConfig } from '@/lib/webhookConfig'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,24 +15,6 @@ const MAX_BODY_BYTES = 8_192
 const JSON_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
   'X-Content-Type-Options': 'nosniff',
-}
-
-function readEnv(...names: string[]): string | undefined {
-  for (const name of names) {
-    const value = process.env[name]?.trim()
-    if (value) return value
-  }
-  return undefined
-}
-
-function getWebhookConfig() {
-  const url = readEnv('UHI_N8N_WEBHOOK_URL', 'N8N_WEBHOOK_URL')
-  const jwtSecret = readEnv('UHI_N8N_JWT_SECRET', 'N8N_JWT_SECRET')
-  if (!url || !jwtSecret) return null
-  if (!isValidWebhookUrl(url) || !isValidJwtSecret(jwtSecret) || !isAllowedWebhookHost(url)) {
-    return null
-  }
-  return { url, jwtSecret }
 }
 
 function sleep(ms: number) {

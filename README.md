@@ -21,4 +21,4 @@ Open **http://127.0.0.1:3010** (port 3010 avoids conflicts with other local proj
 
 ## Deploy
 
-Push to [UnionHomeImprovement](https://github.com/UnionHomeImprovement) on GitHub, then deploy via Vercel with the env vars above set for Production.
+Push to [UnionHomeImprovement](https://github.com/khyle-juggernautmarketing/UnionHomeImprovement) on GitHub, then deploy via Vercel with the env vars above set for Production.

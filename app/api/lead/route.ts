@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { PHONE_PRIMARY } from '@/lib/constants'
+import { isAllowedWebhookHost, isValidJwtSecret, isValidWebhookUrl, signJwtHS256 } from '@/lib/jwt'
 import { isRateLimited, rateLimitKey, validateLeadBody } from '@/lib/leadSecurity'
 import { isSameOriginRequest } from '@/lib/requestSecurity'
-import { isValidBearerSecret, isValidWebhookUrl } from '@/lib/webhook'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,19 +16,30 @@ const JSON_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
 }
 
+function readEnv(...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = process.env[name]?.trim()
+    if (value) return value
+  }
+  return undefined
+}
+
 function getWebhookConfig() {
-  const url = process.env.N8N_WEBHOOK_URL?.trim()
-  const bearer = process.env.N8N_AUTH_BEARER?.trim()
-  if (!url || !bearer) return null
-  if (!isValidWebhookUrl(url) || !isValidBearerSecret(bearer)) return null
-  return { url, bearer }
+  const url = readEnv('UHI_N8N_WEBHOOK_URL', 'N8N_WEBHOOK_URL')
+  const jwtSecret = readEnv('UHI_N8N_JWT_SECRET', 'N8N_JWT_SECRET')
+  if (!url || !jwtSecret) return null
+  if (!isValidWebhookUrl(url) || !isValidJwtSecret(jwtSecret) || !isAllowedWebhookHost(url)) {
+    return null
+  }
+  return { url, jwtSecret }
 }
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function postToWebhook(url: string, bearer: string, payload: Record<string, unknown>) {
+async function postToWebhook(url: string, jwtSecret: string, payload: Record<string, unknown>) {
+  const token = signJwtHS256(jwtSecret, { sub: 'lead-form' })
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS)
 
@@ -37,8 +48,8 @@ async function postToWebhook(url: string, bearer: string, payload: Record<string
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${bearer}`,
+        Accept: 'application/json, text/plain, */*',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -49,13 +60,17 @@ async function postToWebhook(url: string, bearer: string, payload: Record<string
   }
 }
 
-async function postToWebhookWithRetry(url: string, bearer: string, payload: Record<string, unknown>) {
+async function postToWebhookWithRetry(
+  url: string,
+  jwtSecret: string,
+  payload: Record<string, unknown>,
+) {
   let lastResponse: Response | null = null
   let lastError: unknown = null
 
   for (let attempt = 1; attempt <= WEBHOOK_MAX_ATTEMPTS; attempt++) {
     try {
-      const res = await postToWebhook(url, bearer, payload)
+      const res = await postToWebhook(url, jwtSecret, payload)
       if (res.status >= 200 && res.status < 300) return res
 
       lastResponse = res
@@ -146,7 +161,7 @@ export async function POST(request: Request) {
 
     let res: Response
     try {
-      res = await postToWebhookWithRetry(config.url, config.bearer, payload)
+      res = await postToWebhookWithRetry(config.url, config.jwtSecret, payload)
     } catch (e) {
       const aborted = e instanceof Error && e.name === 'AbortError'
       console.error('Lead API: webhook unreachable', aborted ? 'timeout' : 'network')

@@ -33,6 +33,10 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: __dirname,
+  // Never ship pulled Vercel env files — empty values override dashboard secrets at runtime.
+  outputFileTracingExcludes: {
+    '*': ['.env.vercel*', '.vercel/.env*'],
+  },
   poweredByHeader: false,
   images: {
     formats: ['image/avif', 'image/webp'],

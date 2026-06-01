@@ -1,5 +1,4 @@
 {
-  "name": "union-home-improvement",
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install"

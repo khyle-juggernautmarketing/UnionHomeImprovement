@@ -61,8 +61,8 @@ export async function POST(request: Request) {
       },
       { headers: JSON_HEADERS },
     )
-  } catch {
-    console.error('Lead pending API: unexpected error')
+  } catch (err) {
+    console.error('Lead pending API: unexpected error', err)
     return NextResponse.json(
       { error: `Server error. Please call ${PHONE_PRIMARY}.` },
       { status: 500, headers: JSON_HEADERS },
